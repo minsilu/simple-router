@@ -112,6 +112,7 @@ struct ethernet_hdr
 {
 #ifndef ETHER_ADDR_LEN
 #define ETHER_ADDR_LEN 6
+#endif
 #ifndef IP_ADDR_LEN
 #define IP_ADDR_LEN 4
 #endif
