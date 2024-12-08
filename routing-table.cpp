@@ -27,15 +27,31 @@ namespace simple_router {
 
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
-// IMPLEMENT THIS METHOD
-RoutingTableEntry
-RoutingTable::lookup(uint32_t ip) const
-{
+RoutingTableEntry RoutingTable::lookup(uint32_t ip) const {
+    const RoutingTableEntry* longest_match = nullptr;
+    uint32_t matched_mask = 0;
 
-  // FILL THIS IN
+    for (const auto& entry : m_entries) {
+        // Check if the IP falls into the entry's network
+        if ((entry.dest & entry.mask) == (ip & entry.mask)) {
+            // Compare mask lengths, choose the longest mask (more specific route)
+            // Here we assume mask is stored as a 32-bit integer with network bits set to 1.
+            // A common practice is to convert mask to a prefix length, but direct comparison works if consistently applied.
+            if (entry.mask >= matched_mask) {
+                matched_mask = entry.mask;
+                longest_match = &entry;
+            }
+        }
+    }
 
-  throw std::runtime_error("Routing entry not found");
+    if (longest_match != nullptr) {
+        return *longest_match;
+    } else {
+        // If we didn't find a match, throw an error
+        throw std::runtime_error("Routing entry not found");
+    }
 }
+
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 

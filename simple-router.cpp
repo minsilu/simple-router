@@ -341,6 +341,11 @@ void SimpleRouter::handleICMPPortUnreachable(const Buffer& packet, const std::st
     handleICMPt3(packet, inIface, icmp_port_unreachable, icmp_port_unreachable_code)
 }
 
+void SimpleRouter::handleICMPHostUnreachable(const Buffer& packet, const std::string& inIface) {
+    std::cout << "[INFO] Handling ICMP Host Unreachable." << std::endl;
+    handleICMPt3(packet, inIface, icmp_port_unreachable, icmp_host_unreachable_code)
+}
+
 void SimpleRouter::handleICMPTimeExceeded(const Buffer& packet, const std::string& inIface) {
     std::cout << "[INFO] Handling ICMP Time Exceeded." << std::endl;
     handleICMPt3(packet, inIface, icmp_time_exceeded, icmp_time_exceeded_code)
@@ -390,6 +395,7 @@ void SimpleRouter::handleICMPt3(const Buffer& packet, const std::string& inIface
       std::cout << "[INFO] ICMP Time Exceeded message sent." << std::endl;
 }
 
+// todo: check the queue for arp request
 void SimpleRouter::forwardIPv4(const Buffer& packet, const std::string& inIface) {
     std::cout << "[INFO] Forwarding IPv4 packet." << std::endl;
 
@@ -404,12 +410,12 @@ void SimpleRouter::forwardIPv4(const Buffer& packet, const std::string& inIface)
 
     // Find ARP entry for next-hop MAC address
     auto arpEntry = m_arp.lookup(ip_ptr->ip_dst);
-    if (!arpEntry) {
-        std::cout << "[WARNING] No ARP entry for destination. sending ARP request." << std::endl;
-        sendArpRequest(ip_ptr->ip_dst);  
-        //m_arp.queuePacket(ip_ptr->ip_dst, packet, inIface); /// todo: check this funcion
-        return;
-    }
+    // if (!arpEntry) {
+    //     std::cout << "[WARNING] No ARP entry for destination. sending ARP request." << std::endl;
+    //     sendArpRequest(ip_ptr->ip_dst);  
+    //     //m_arp.queuePacket(ip_ptr->ip_dst, packet, inIface); /// todo: check this funcion
+    //     return;
+    // }
 
     const Interface* outIface = findIfaceByName(route.ifName);
     if (!outIface) {
@@ -433,7 +439,6 @@ void SimpleRouter::forwardIPv4(const Buffer& packet, const std::string& inIface)
     sendPacket(forwardPacket, route.ifName);
     std::cout << "[INFO] IPv4 packet forwarded via interface '" << route.ifName << "'." << std::endl;
 }
-
 
 void SimpleRouter::sendArpRequest(uint32_t ip) {
     std::cout << "[INFO] Preparing to send ARP request for IP: " << ip << std::endl;

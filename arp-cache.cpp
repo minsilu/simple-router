@@ -27,13 +27,41 @@ namespace simple_router {
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 // IMPLEMENT THIS METHOD
-void
-ArpCache::periodicCheckArpRequestsAndCacheEntries()
-{
 
-  // FILL THIS IN
+void ArpCache::periodicCheckArpRequestsAndCacheEntries() {
 
+    // Handle all queued ARP requests
+    for (auto iter = m_arpRequests.begin(); iter != m_arpRequests.end();) {
+        std::shared_ptr<ArpRequest> req = *iter;
+
+        if (req->nTimesSent >= 5) {
+            for (auto& pending : req->packets) {
+                m_router.handleICMPHostUnreachable(pending.packet, pending.iface);
+            }
+            iter = m_arpRequests.erase(iter);
+        } else {
+            m_router.sendArpRequest(req->ip);
+            req->timeSent = std::chrono::steady_clock::now();
+            req->nTimesSent++;
+            ++iter;
+        }
+    }
+
+    // Handle invalid ARP cache entries
+    std::vector<std::shared_ptr<ArpEntry>> toRemove;
+    for (auto iter = m_cacheEntries.begin(); iter != m_cacheEntries.end(); ++iter) {
+        if (!(*iter)->isValid) {
+            toRemove.push_back(*iter);
+        }
+    }
+
+    // Remove all invalid entries from the cache
+    for (auto& invalid : toRemove) {
+        m_cacheEntries.remove(invalid);
+    }
 }
+
+
 //////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////
 

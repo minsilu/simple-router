@@ -43,6 +43,7 @@ public:
   void handleIPv4(const Buffer& packet, const std::string& inIface);
   void handleICMPEcho(const Buffer& packet, const std::string& inIface);
   void handleICMPPortUnreachable(const Buffer& packet,const std::string& inIface);
+  void handleICMPHostUnreachable(const Buffer& packet,const std::string& inIface);
   void handleICMPTimeExceeded(const Buffer& packet,const std::string& inIface);
   void handleICMP(const Buffer& packet, const std::string& inIface);
   void handleICMPt3(const Buffer& packet, const std::string& inIface, uint8_t type, uint8_t code);
