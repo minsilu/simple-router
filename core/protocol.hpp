@@ -123,6 +123,18 @@ struct ethernet_hdr
 
 enum ip_protocol { // ip_p
   ip_protocol_icmp = 0x0001,
+  ip_protocol_tcp = 0x0006,
+  ip_protocol_udp = 0x0011,
+};
+
+enum icmptype { // icmp_type
+  icmp_echo = 0x0008,
+  icmp_echo_rely = 0x0000,
+};
+
+enum icmpcode { // icmp_code
+  icmp_time_exceeded = 0x0000,
+  icmp_port_unreachable = 0x0003,
 };
 
 enum ethertype { // ether_type
@@ -137,6 +149,10 @@ enum arp_opcode { // arp_op
 
 enum arp_hrd_fmt { //arp_hrd
   arp_hrd_ethernet = 0x0001,
+};
+
+enum arp_pro_fmt { //arp_pro
+  arp_pro_ip = 0x0800,
 };
 
 
