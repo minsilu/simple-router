@@ -21,8 +21,6 @@
 
 namespace simple_router {
 
-
-
 void SimpleRouter::handlePacket(const Buffer& packet, const std::string& inIface) {
     std::cout << "[INFO] Received a packet of size " << packet.size()
               << " bytes on interface '" << inIface << "'" << std::endl;
@@ -143,7 +141,7 @@ void SimpleRouter::handleArpRequest(const Buffer& packet, const std::string& inI
 
   const Interface* iface = findIfaceByName(inIface);
   // Validate that the ARP request is targeted at this router's IP address
-  if (arp_ptr->arp_tip != iface->ip) { // TDOO: check if arp_ptr->arp_tip != iface->ip
+  if (arp_ptr->arp_tip != iface->ip) { 
       std::cout << "[INFO] ARP request target IP (" << ntohl(arp_ptr->arp_tip) << ") does not match interface IP (" << iface->ip << "). Ignoring request." << std::endl;
       return;
   }
@@ -276,11 +274,7 @@ void SimpleRouter::handleIPv4(const Buffer& packet, const std::string& inIface){
 void SimpleRouter::handleICMPEcho(const Buffer& packet, const std::string& inIface) {
     std::cout << "[INFO] Processing ICMP Echo or Echo Reply message." << std::endl;
 
-    // Define offsets for Ethernet, IP, and ICMP headers 
-    size_t ethernet_offset = 0;
-    size_t ip_offset = ethernet_offset + sizeof(ethernet_hdr);
-    size_t icmp_offset = ip_offset + sizeof(ip_hdr);
-
+    size_t icmp_offset = sizeof(ethernet_hdr) + sizeof(ip_hdr);
     // Ensure packet size is sufficient
     if(packet.size() < icmp_offset + sizeof(icmp_hdr)) {
         std::cout << "[ERROR] Packet size insufficient for ICMP header. Ignoring." << std::endl;
@@ -301,17 +295,27 @@ void SimpleRouter::handleICMPEcho(const Buffer& packet, const std::string& inIfa
         return;
     }
 
+    handleICMP(packet, inIface)
+}
+
+void SimpleRouter::handleICMP(const Buffer& packet, const std::string& inIface) {
+
+    // Define offsets for Ethernet, IP, and ICMP headers 
+    size_t ethernet_offset = 0;
+    size_t ip_offset = ethernet_offset + sizeof(ethernet_hdr);
+    size_t icmp_offset = ip_offset + sizeof(ip_hdr);
+
     ethernet_hdr* eth_ptr = reinterpret_cast<ethernet_hdr*>(packet.data() + ethernet_offset);
     ip_hdr* ip_ptr = reinterpret_cast<ip_hdr*>(packet.data() + ip_offset);
-    
+
     Buffer reply(packet);
-    // 1. Construct Ethernet Header
+    // Ethernet Header
     ethernet_hdr* reply_eth = reinterpret_cast<ethernet_hdr*>(reply.data() + ethernet_offset);
     std::memcpy(reply_eth->ether_dhost, eth_ptr->ether_shost, ETHER_ADDR_LEN); 
     std::memcpy(reply_eth->ether_shost, eth_ptr->ether_dhost, ETHER_ADDR_LEN); 
-    reply_eth->ether_type = eth_ptr->ether_type; 
+    rep_eth->ether_type = htons(ethertype_ip);
 
-    // 2. Construct IP Header 
+    //IP Header 
     ip_hdr* reply_ip = reinterpret_cast<ethernet_hdr*>(reply.data() + ip_offset);
     reply_ip->ip_id = 0;
     reply_ip->ip_src = ip_ptr->ip_dst; 
@@ -320,57 +324,157 @@ void SimpleRouter::handleICMPEcho(const Buffer& packet, const std::string& inIfa
     reply_ip->ip_sum = 0; 
     reply_ip->ip_sum = cksum(reinterpret_cast<uint8_t*>(reply_ip), sizeof(ip_hdr));
 
-    // 3. Construct ICMP Header 
+    //ICMP Header 
     icmp_hdr* reply_icmp = reinterpret_cast<ethernet_hdr*>(reply.data() + icmp_offset);
     reply_icmp.icmp_type = icmp_echo_rely;
     reply_icmp.icmp_code = 0x00; 
     reply_icmp.icmp_sum = 0; 
     reply_icmp.icmp_sum = cksum(reinterpret_cast<uint8_t*>(reply_icmp), packet.size() - icmp_offset);
 
-
     sendPacket(reply_packet, inIface);
 
     std::cout << "[INFO] ICMP Echo Reply sent." << std::endl;
 }
 
+void SimpleRouter::handleICMPPortUnreachable(const Buffer& packet, const std::string& inIface) {
+    std::cout << "[INFO] Handling ICMP Port Unreachable." << std::endl;
+    handleICMPt3(packet, inIface, icmp_port_unreachable, icmp_port_unreachable_code)
+}
 
+void SimpleRouter::handleICMPTimeExceeded(const Buffer& packet, const std::string& inIface) {
+    std::cout << "[INFO] Handling ICMP Time Exceeded." << std::endl;
+    handleICMPt3(packet, inIface, icmp_time_exceeded, icmp_time_exceeded_code)
+}
+
+void SimpleRouter::handleICMPt3(const Buffer& packet, const std::string& inIface, uint8_t type, uint8_t code) {
+
+    ethernet_hdr* orig_eth = reinterpret_cast<ethernet_hdr*>(packet.data());
+    ip_hdr* orig_ip = reinterpret_cast<ip_hdr*>(packet.data() + sizeof(ethernet_hdr));
+    const Interface* outIface = findIfaceByName(inIface);
+
+    Buffer reply_packet(sizeof(ethernet_hdr) + sizeof(ip_hdr) + sizeof(icmp_t3_hdr));
+
+    // Ethernet Header
+    ethernet_hdr* reply_eth = reinterpret_cast<ethernet_hdr*>(reply_packet.data());
+    memcpy(reply_eth->ether_dhost, orig_eth->ether_shost, ETHER_ADDR_LEN); 
+    memcpy(reply_eth->ether_shost, orig_eth->ether_dhost, ETHER_ADDR_LEN); 
+    reply_eth->ether_type = htons(ethertype_ip); 
+
+    // IP Header
+    ip_hdr* reply_ip = reinterpret_cast<ip_hdr*>(reply_packet.data() + sizeof(ethernet_hdr));
+    memset(reply_ip, orig_ip, sizeof(ip_hdr)); 
+    reply_ip->ip_tos = 0;
+    reply_ip->ip_len = htons(sizeof(ip_hdr) + sizeof(icmp_t3_hdr));
+    reply_ip->ip_id = 0; 
+    reply_ip->ip_ttl = 64;
+    reply_ip->ip_p = ip_protocol_icmp;
+    reply_ip->ip_src = outIface->ip; 
+    reply_ip->ip_dst = orig_ip->ip_src; 
+    reply_ip->ip_sum = 0; 
+    reply_ip->ip_sum = cksum(reinterpret_cast<uint8_t*>(reply_ip), sizeof(ip_hdr));
+
+    // ICMP Type 3 Header
+    icmp_t3_hdr* reply_icmp = reinterpret_cast<icmp_t3_hdr*>(reply_packet.data() + sizeof(ethernet_hdr) + sizeof(ip_hdr));
+    reply_icmp->icmp_type = type; 
+    reply_icmp->icmp_code = code; 
+    reply_icmp->icmp_sum = 0;  
+    reply_icmp->next_mtu = 0;
+    reply_icmp->unused = 0;
+    memcpy(reply_icmp->data, orig_ip, ICMP_DATA_SIZE); 
+    reply_icmp->icmp_sum = cksum(reinterpret_cast<uint8_t*>(reply_icmp), sizeof(icmp_t3_hdr));
+
+    sendPacket(reply_packet, inIface);
+    if (type == icmp_port_unreachable)
+      std::cout << "[INFO] ICMP Port Unreachable message sent." << std::endl;
+    else if (type == icmp_time_exceeded)
+      std::cout << "[INFO] ICMP Time Exceeded message sent." << std::endl;
+}
 
 void SimpleRouter::forwardIPv4(const Buffer& packet, const std::string& inIface) {
-    std::cout << "Forwarding IPv4 packet" << std::endl;
+    std::cout << "[INFO] Forwarding IPv4 packet." << std::endl;
 
-    ip_hdr* ip_ptr = (ip_hdr*)(packet.data() + sizeof(ethernet_hdr));
-    
-    // Look up the destination IP in the routing table
-    auto routing_entry = m_routingTable.lookup(ip_ptr->ip_dst);
-    
-    // Look up the corresponding ARP entry for the next-hop MAC address
-    auto arp_entry = m_arp.lookup(ip_ptr->ip_dst);
-    if (arp_entry == nullptr) {
-        std::cout << "No ARP entry for destination IP, sending ARP request." << std::endl;
-        sendArpRequest(ip_ptr->ip_dst); // Send an ARP request to resolve the MAC address
+    ip_hdr* ip_ptr = reinterpret_cast<ip_hdr*>(const_cast<uint8_t*>(packet.data()) + sizeof(ethernet_hdr));
+
+    // Look up the appropriate route for the destination IP
+    auto route = m_routingTable.lookup(ip_ptr->ip_dst);
+    if (!route.valid) {
+        std::cout << "[ERROR] No valid route found for this destination. Ignoring packet." << std::endl;
         return;
     }
 
-    // Get the output interface from the routing table entry
-    const Interface* outIface = findIfaceByName(routing_entry.ifName);
-    
-    // Create a new buffer for the forwarded packet
-    Buffer forward(packet);
+    // Find ARP entry for next-hop MAC address
+    auto arpEntry = m_arp.lookup(ip_ptr->ip_dst);
+    if (!arpEntry) {
+        std::cout << "[WARNING] No ARP entry for destination. sending ARP request." << std::endl;
+        sendArpRequest(ip_ptr->ip_dst);  
+        //m_arp.queuePacket(ip_ptr->ip_dst, packet, inIface); /// todo: check this funcion
+        return;
+    }
 
-    // Ethernet header: set the destination MAC address from the ARP cache
-    ethernet_hdr* fwd_eth = (ethernet_hdr*)forward.data();
-    std::memcpy(fwd_eth->ether_dhost, arp_entry->mac.data(), ETHER_ADDR_LEN);
-    std::memcpy(fwd_eth->ether_shost, outIface->addr.data(), ETHER_ADDR_LEN);
+    const Interface* outIface = findIfaceByName(route.ifName);
+    if (!outIface) {
+        std::cout << "[ERROR] Outgoing interface not found (" << route.ifName << "). Ignoring packet." << std::endl;
+        return;
+    }
 
-    // IP header: decrement TTL and recompute the checksum
-    ip_hdr* fwd_ip = (ip_hdr*)(forward.data() + sizeof(ethernet_hdr));
-    fwd_ip->ip_ttl--;
-    fwd_ip->ip_sum = 0;  // Reset checksum
-    fwd_ip->ip_sum = cksum((uint8_t*)fwd_ip, sizeof(ip_hdr));  // Recompute checksum
+    Buffer forwardPacket(packet);
 
-    // Send the packet out the appropriate interface
-    sendPacket(forward, routing_entry.ifName);
+    // Ethernet header
+    ethernet_hdr* eth = reinterpret_cast<ethernet_hdr*>(forwardPacket.data());
+    std::memcpy(eth->ether_dhost, arpEntry->mac.data(), ETHER_ADDR_LEN);
+    std::memcpy(eth->ether_shost, outIface->addr.data(), ETHER_ADDR_LEN);
+
+    // IP header
+    ip_hdr* fwd_ip = reinterpret_cast<ip_hdr*>(forwardPacket.data() + sizeof(ethernet_hdr));
+    //fwd_ip->ip_ttl -= 1;
+    fwd_ip->ip_sum = 0; 
+    fwd_ip->ip_sum = cksum(reinterpret_cast<uint8_t*>(fwd_ip), sizeof(ip_hdr));
+
+    sendPacket(forwardPacket, route.ifName);
+    std::cout << "[INFO] IPv4 packet forwarded via interface '" << route.ifName << "'." << std::endl;
 }
+
+
+void SimpleRouter::sendArpRequest(uint32_t ip) {
+    std::cout << "[INFO] Preparing to send ARP request for IP: " << ip << std::endl;
+
+    RoutingTableEntry route = m_routingTable.lookup(ip);
+    if (!route.valid) {
+        std::cout << "[ERROR] No valid route found for IP: " << ip << ". Cannot send ARP request." << std::endl;
+        return;
+    }
+
+    const Interface* outIface = findIfaceByName(route.ifName);
+    if (!outIface) {
+        std::cout << "[ERROR] Outgoing interface '" << route.ifName << "' not found. Cannot send ARP request." << std::endl;
+        return;
+    }
+
+    Buffer arpRequest(sizeof(ethernet_hdr) + sizeof(arp_hdr));
+    static const uint8_t BROADCAST_MAC[ETHER_ADDR_LEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+
+    ethernet_hdr* eth_hdr = reinterpret_cast<ethernet_hdr*>(arpRequest.data());
+    std::memcpy(eth_hdr->ether_shost, outIface->addr.data(), ETHER_ADDR_LEN);
+    std::memcpy(eth_hdr->ether_dhost, BROADCAST_MAC, ETHER_ADDR_LEN);
+    eth_hdr->ether_type = htons(ethertype_arp);
+
+    arp_hdr* arp_hdr_req = reinterpret_cast<arp_hdr*>(arpRequest.data() + sizeof(ethernet_hdr));
+    arp_hdr_req->arp_hrd = htons(arp_hrd_ethernet);
+    arp_hdr_req->arp_pro = htons(ethertype_ip);
+    arp_hdr_req->arp_hln = ETHER_ADDR_LEN;
+    arp_hdr_req->arp_pln = IP_ADDR_LEN;
+    arp_hdr_req->arp_op = htons(arp_op_request);
+    arp_hdr_req->arp_sip = outIface->ip;
+    arp_hdr_req->arp_tip = ip;
+    std::memcpy(arp_hdr_req->arp_sha, outIface->addr.data(), ETHER_ADDR_LEN);
+    std::memcpy(arp_hdr_req->arp_tha, BROADCAST_MAC, ETHER_ADDR_LEN);
+
+    std::cout << "[INFO] Sending ARP request for IP: " << ip 
+              << " out interface '" << outIface->name << "'." << std::endl;
+
+    sendPacket(arpRequest, outIface->name);
+}
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////

@@ -34,6 +34,24 @@ public:
 
   SimpleRouter();
 
+  // Methods to handle ARP requests and replies
+  void handleArp(const Buffer& packet, const std::string& inIface);
+  void handleArpRequest(const Buffer& packet, const std::string& inIface);
+  void handleArpReply(const Buffer& packet, const std::string& inIface);
+
+  // Methods to handle IPv4 packets
+  void handleIPv4(const Buffer& packet, const std::string& inIface);
+  void handleICMPEcho(const Buffer& packet, const std::string& inIface);
+  void handleICMPPortUnreachable(const Buffer& packet,const std::string& inIface);
+  void handleICMPTimeExceeded(const Buffer& packet,const std::string& inIface);
+  void handleICMP(const Buffer& packet, const std::string& inIface);
+  void handleICMPt3(const Buffer& packet, const std::string& inIface, uint8_t type, uint8_t code);
+
+  void forwardIPv4(const Buffer& packet, const std::string& inIface);
+  void sendArpRequest(uint32_t ip);
+
+
+
   /**
    * IMPLEMENT THIS METHOD
    *
@@ -106,17 +124,6 @@ private:
   friend class Router;
   pox::PacketInjectorPrx m_pox;
 
-
-  // Methods to handle ARP requests and replies
-  void handleArp(const Buffer& packet, const std::string& inIface);
-  void handleArpRequest(const Buffer& packet, const std::string& inIface);
-  void handleArpReply(const Buffer& packet, const std::string& inIface);
-
-  // Methods to handle IPv4 packets
-  void handleIPv4(const Buffer& packet, const std::string& inIface);
-  void forwardIPv4(const Buffer& packet, const std::string& inIface);
-  void sendArpRequest(uint32_t ip);
-  void handleICMP(const Buffer& packet, const std::string& inIface);
 
 };
 

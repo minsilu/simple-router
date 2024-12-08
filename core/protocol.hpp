@@ -130,11 +130,13 @@ enum ip_protocol { // ip_p
 enum icmptype { // icmp_type
   icmp_echo = 0x0008,
   icmp_echo_rely = 0x0000,
+  icmp_time_exceeded = 0x000b,
+  icmp_port_unreachable = 0x0003,
 };
 
 enum icmpcode { // icmp_code
-  icmp_time_exceeded = 0x0000,
-  icmp_port_unreachable = 0x0003,
+  icmp_time_exceeded_code = 0x0000,
+  icmp_port_unreachable_code = 0x0003,
 };
 
 enum ethertype { // ether_type
