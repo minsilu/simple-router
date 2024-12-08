@@ -24,7 +24,9 @@
 
 #include "pox.hpp"
 
+
 namespace simple_router {
+
 
 class SimpleRouter
 {
@@ -40,70 +42,60 @@ public:
    * interface \p inIface are passed in as parameters. The packet is
    * complete with ethernet headers.
    */
-  void
-  handlePacket(const Buffer& packet, const std::string& inIface);
+  void handlePacket(const Buffer& packet, const std::string& inIface);
+
 
   /**
    * USE THIS METHOD TO SEND PACKETS
    *
    * Call this method to send packet \p packt from the router on interface \p outIface
    */
-  void
-  sendPacket(const Buffer& packet, const std::string& outIface);
+  void sendPacket(const Buffer& packet, const std::string& outIface);
 
   /**
    * Load routing table information from \p rtConfig file
    */
-  bool
-  loadRoutingTable(const std::string& rtConfig);
+  bool loadRoutingTable(const std::string& rtConfig);
 
   /**
    * Load local interface configuration
    */
-  void
-  loadIfconfig(const std::string& ifconfig);
+  void loadIfconfig(const std::string& ifconfig);
 
   /**
    * Get routing table
    */
-  const RoutingTable&
-  getRoutingTable() const;
+  const RoutingTable& getRoutingTable() const;
 
   /**
    * Get ARP table
    */
-  const ArpCache&
-  getArp() const;
+  const ArpCache& getArp() const;
 
   /**
    * Print router interfaces
    */
-  void
-  printIfaces(std::ostream& os);
+  void printIfaces(std::ostream& os);
 
   /**
    * Reset ARP cache and interface list (e.g., when mininet restarted)
    */
-  void
-  reset(const pox::Ifaces& ports);
+  void reset(const pox::Ifaces& ports);
 
   /**
    * Find interface based on interface's IP address
    */
-  const Interface*
-  findIfaceByIp(uint32_t ip) const;
+  const Interface* findIfaceByIp(uint32_t ip) const;
 
   /**
    * Find interface based on interface's MAC address
    */
-  const Interface*
-  findIfaceByMac(const Buffer& mac) const;
+  const Interface* findIfaceByMac(const Buffer& mac) const;
 
   /**
    * Find interface based on interface's name
    */
-  const Interface*
-  findIfaceByName(const std::string& name) const;
+  const Interface* findIfaceByName(const std::string& name) const;
 
 private:
   ArpCache m_arp;
@@ -113,6 +105,19 @@ private:
 
   friend class Router;
   pox::PacketInjectorPrx m_pox;
+
+
+  // Methods to handle ARP requests and replies
+  void handleArp(const Buffer& packet, const std::string& inIface);
+  void handleArpRequest(const Buffer& packet, const std::string& inIface);
+  void handleArpReply(const Buffer& packet, const std::string& inIface);
+
+  // Methods to handle IPv4 packets
+  void handleIPv4(const Buffer& packet, const std::string& inIface);
+  void forwardIPv4(const Buffer& packet, const std::string& inIface);
+  void sendArpRequest(uint32_t ip);
+  void handleICMP(const Buffer& packet, const std::string& inIface);
+
 };
 
 inline const RoutingTable&

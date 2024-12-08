@@ -20,12 +20,13 @@
 namespace simple_router {
 
 Interface::Interface(const std::string& name, const Buffer& addr, uint32_t ip)
-  : name(name)
-  , addr(addr)
-  , ip(ip)
+  : name(name) // The name of the network interface (e.g., "eth0").
+  , addr(addr) // The MAC address of the interface, stored as a binary buffer.
+  , ip(ip) // The IP address of the interface, stored as a 32-bit integer.
 {
 }
 
+// Example output: eth0 (192.168.1.1, 00:0c:29:02:39:28)
 std::ostream&
 operator<<(std::ostream& os, const Interface& iface)
 {
@@ -36,3 +37,17 @@ operator<<(std::ostream& os, const Interface& iface)
 }
 
 } // namespace simple_router
+
+
+/*
+When the router initializes (e.g., in SimpleRouter::reset()), 
+the Interface class is used to represent and store each network adapter's details.
+
+When a packet is received or sent, the SimpleRouter class uses 
+the Interface objects to determine which network adapter is involved 
+(via methods like findIfaceByName or findIfaceByIp)
+
+The routing table and ARP cache interact with Interface objects
+ to resolve addresses and send packets to the correct destination.
+
+*/

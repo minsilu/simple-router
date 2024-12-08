@@ -24,6 +24,7 @@
 namespace simple_router {
 
 /* file header */
+// Defines metadata for the packet capture file
 struct pcap_file_header {
   uint32_t   magic;         /* magic number */
   uint16_t version_major; /* version number major */
@@ -35,10 +36,11 @@ struct pcap_file_header {
 };
 
 /* packet header */
+// Defines metadata for the packet capture file
 struct pcap_pkthdr {
   struct timeval ts;     /* time stamp  */
   uint32_t caplen;          /* length of portion present */
-  uint32_t len;             /* length this packet (off wire) */
+  uint32_t len;             /* length this packet (actual length on the wire, off wire) */
 };
 
 /*
@@ -68,7 +70,7 @@ FILE*
 sr_dump_open(const char *fname, int thiszone, int snaplen);
 
 /**
- * Write data into the log file
+ * Write data(packet) into the log file
  */
 void
 sr_dump(FILE *fp, const struct pcap_pkthdr *h, const unsigned char *sp);

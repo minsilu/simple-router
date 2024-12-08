@@ -64,15 +64,15 @@ struct icmp_hdr {
 } __attribute__ ((packed)) ;
 
 
-/* Structure of a type3 ICMP header
+/* Structure of a type3 ICMP header - (Destination Unreachable)
  */
 struct icmp_t3_hdr {
   uint8_t icmp_type;
   uint8_t icmp_code;
   uint16_t icmp_sum;
   uint16_t unused;
-  uint16_t next_mtu;
-  uint8_t data[ICMP_DATA_SIZE];
+  uint16_t next_mtu; // Contains the MTU value for "Fragmentation Needed" messages.
+  uint8_t data[ICMP_DATA_SIZE]; // Contains a portion of the original packet's data to help the sender identify the problem.
 } __attribute__ ((packed)) ;
 
 /*
@@ -112,6 +112,8 @@ struct ethernet_hdr
 {
 #ifndef ETHER_ADDR_LEN
 #define ETHER_ADDR_LEN 6
+#ifndef IP_ADDR_LEN
+#define IP_ADDR_LEN 4
 #endif
   uint8_t  ether_dhost[ETHER_ADDR_LEN]; /* destination ethernet address */
   uint8_t  ether_shost[ETHER_ADDR_LEN]; /* source ethernet address */
@@ -119,21 +121,21 @@ struct ethernet_hdr
 } __attribute__ ((packed)) ;
 
 
-enum ip_protocol {
+enum ip_protocol { // ip_p
   ip_protocol_icmp = 0x0001,
 };
 
-enum ethertype {
+enum ethertype { // ether_type
   ethertype_arp = 0x0806,
   ethertype_ip = 0x0800,
 };
 
-enum arp_opcode {
+enum arp_opcode { // arp_op
   arp_op_request = 0x0001,
   arp_op_reply = 0x0002,
 };
 
-enum arp_hrd_fmt {
+enum arp_hrd_fmt { //arp_hrd
   arp_hrd_ethernet = 0x0001,
 };
 

@@ -22,6 +22,7 @@
 
 namespace simple_router {
 
+// Writes the file header (metadata) to the dump file, ensuring it complies with the PCAP format.
 static void
 sf_write_header(FILE *fp, int linktype, int thiszone, int snaplen)
 {
@@ -34,7 +35,7 @@ sf_write_header(FILE *fp, int linktype, int thiszone, int snaplen)
   hdr.thiszone = thiszone;
   hdr.snaplen = snaplen;
   hdr.sigfigs = 0;
-  hdr.linktype = linktype;
+  hdr.linktype = linktype; // e.g., Ethernet
 
   if (fwrite((char *)&hdr, sizeof(hdr), 1, fp) != 1)
     fprintf(stderr, "sf_write_header: can't write header\n");
@@ -44,11 +45,11 @@ sf_write_header(FILE *fp, int linktype, int thiszone, int snaplen)
  * Initialize so that sf_write_header() will output to the file named 'fname'.
  */
 FILE *
-sr_dump_open(const char *fname, int thiszone, int snaplen)
+sr_dump_open(const char *fname, int thiszone, int snaplen) // Opens the specified dump file for writing
 {
   FILE *fp;
 
-  if (fname[0] == '-' && fname[1] == '\0')
+  if (fname[0] == '-' && fname[1] == '\0') // If the filename is "-", it writes to stdout, allowing real-time streaming of packets.
     fp = stdout;
   else {
     fp = fopen(fname, "w");

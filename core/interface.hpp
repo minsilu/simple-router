@@ -35,7 +35,7 @@ public:
   print();
 
   bool
-  operator<(const Interface& rh) const;
+  operator<(const Interface& rh) const; // It compares interfaces by their name
 
 public:
   std::string name;
@@ -49,9 +49,25 @@ Interface::operator<(const Interface& rh) const
   return name < rh.name;
 }
 
+// Overloaded to allow easy printing of Interface objects. 
+// It formats and outputs the name, IP, and MAC address of the interface.
 std::ostream&
-operator<<(std::ostream& os, const Interface& iface);
+operator<<(std::ostream& os, const Interface& iface); 
 
 } // namespace simple_router
 
 #endif // SIMPLE_ROUTER_INTERFACE_HPP
+
+
+/*
+When the router initializes (e.g., in SimpleRouter::reset()), 
+the Interface class is used to represent and store each network adapter's details.
+
+When a packet is received or sent, the SimpleRouter class uses 
+the Interface objects to determine which network adapter is involved 
+(via methods like findIfaceByName or findIfaceByIp)
+
+The routing table and ARP cache interact with Interface objects
+ to resolve addresses and send packets to the correct destination.
+
+*/

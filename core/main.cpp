@@ -52,7 +52,8 @@ public:
     : m_router(router)
   {
   }
-
+  
+  // Provides debugging utilities for querying
   std::string
   getArp(const ::Ice::Current&) override
   {
@@ -79,38 +80,44 @@ public:
   int
   run(int, char*[]) override
   {
+    // Load Routing Table to rtFile
     auto rtFile = communicator()->getProperties()->getPropertyWithDefault("RoutingTable", "RTABLE");
     if (!m_router.loadRoutingTable(rtFile)) {
       std::cerr << "ERROR: Cannot load routing table from `" << rtFile << "`" << std::endl;
       return EXIT_FAILURE;
     }
 
+    // Connect to POX Controller
+    // POX provides the interface for injecting packets and managing router interfaces
     m_router.m_pox = pox::PacketInjectorPrx::checkedCast(communicator()
                                                          ->propertyToProxy("SimpleRouter.Proxy")
                                                          ->ice_twoway());
-
     if (!m_router.m_pox) {
       std::cerr << "ERROR: Cannot connect to POX controller or invalid configuration of the controller" << std::endl;
       return EXIT_FAILURE;
     }
 
+    // Load Interface Configuration from the IP_CONFIG file into the router
     auto ifFile = communicator()->getProperties()->getPropertyWithDefault("Ifconfig", "IP_CONFIG");
     m_router.loadIfconfig(ifFile);
 
+    // Set Up Ice Adapter for Packet Handling
     Ice::ObjectAdapterPtr adapter = communicator()->createObjectAdapter("");
     Ice::Identity ident;
     ident.name = IceUtil::generateUUID();
     ident.category = "";
-
-    adapter->add(pox::PacketHandlerPtr(new PacketHandler(m_router)), ident);
+    // Registers the PacketHandler object so that it can handle incoming packets forwarded by the POX controller.
+    adapter->add(pox::PacketHandlerPtr(new PacketHandler(m_router)), ident); 
     adapter->activate();
     m_router.m_pox->ice_getConnection()->setAdapter(adapter);
     m_router.m_pox->addPacketHandler(ident);
 
+    // Reset Router with Active Interfaces
     auto ifaces = m_router.m_pox->getIfaces();
     m_router.reset(ifaces);
 
     volatile bool shouldStop = false;
+    // Spawns a background thread to periodically check the connection with the POX controller using ice_ping().
     auto checkThread = std::thread([&] {
         while (!shouldStop) {
           std::this_thread::sleep_for(std::chrono::seconds(1));
@@ -124,10 +131,12 @@ public:
         }
       });
 
+    // Debugging Adapter for Tester
     auto testAdapter = communicator()->createObjectAdapterWithEndpoints("Tester", "tcp -p 65500");
     testAdapter->add(pox::TesterPtr(new Tester(m_router)), communicator()->stringToIdentity("Tester"));
     testAdapter->activate();
 
+    // Wait for Shutdown
     communicator()->waitForShutdown();
     shouldStop = true;
     checkThread.join();
