@@ -30,35 +30,44 @@ namespace simple_router {
 
 void ArpCache::periodicCheckArpRequestsAndCacheEntries() {
 
-    // Handle all queued ARP requests
+    // Handle ARP requests
     for (auto iter = m_arpRequests.begin(); iter != m_arpRequests.end();) {
-        std::shared_ptr<ArpRequest> req = *iter;
+        auto arpRequest = *iter;
 
-        if (req->nTimesSent >= 5) {
-            for (auto& pending : req->packets) {
-                m_router.handleICMPHostUnreachable(pending.packet, pending.iface);
+        if (arpRequest->nTimesSent >= 5) {
+            // Send ICMP Host Unreachable for each pending packet
+            for (auto& pending_packet : arpRequest->packets) {
+                m_router.handleICMPHostUnreachable(pending_packet.packet, pending_packet.iface);
             }
+            // Remove the ARP request from the queue
             iter = m_arpRequests.erase(iter);
-        } else {
-            m_router.sendArpRequest(req->ip);
-            req->timeSent = std::chrono::steady_clock::now();
-            req->nTimesSent++;
+        } 
+        else {
+            // Resend ARP request
+            m_router.sendArpRequest(arpRequest->ip);
+            arpRequest->timeSent = std::chrono::steady_clock::now();
+            arpRequest->nTimesSent++;
             ++iter;
         }
     }
 
-    // Handle invalid ARP cache entries
-    std::vector<std::shared_ptr<ArpEntry>> toRemove;
-    for (auto iter = m_cacheEntries.begin(); iter != m_cacheEntries.end(); ++iter) {
-        if (!(*iter)->isValid) {
-            toRemove.push_back(*iter);
-        }
-    }
+    // Remove invalid ARP cache entries efficiently
+    m_cacheEntries.remove_if([](const std::shared_ptr<ArpEntry>& entry) {
+        return !entry->isValid;
+    });
 
-    // Remove all invalid entries from the cache
-    for (auto& invalid : toRemove) {
-        m_cacheEntries.remove(invalid);
-    }
+    // // Handle invalid ARP cache entries
+    // std::vector<std::shared_ptr<ArpEntry>> invaid_entries;
+    // for (auto iter = m_cacheEntries.begin(); iter != m_cacheEntries.end(); ++iter) {
+    //     if (!(*iter)->isValid) {
+    //         invaid_entries.push_back(*iter);
+    //     }
+    // }
+
+    // // Remove all invalid entries from the cache
+    // for (auto& invalid : invaid_entries) {
+    //     m_cacheEntries.remove(invalid);
+    // }
 }
 
 

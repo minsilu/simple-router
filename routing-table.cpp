@@ -29,7 +29,7 @@ namespace simple_router {
 //////////////////////////////////////////////////////////////////////////
 RoutingTableEntry RoutingTable::lookup(uint32_t ip) const {
     const RoutingTableEntry* longest_match = nullptr;
-    uint32_t matched_mask = 0;
+    uint32_t matched_len = 0;
 
     for (const auto& entry : m_entries) {
         // Check if the IP falls into the entry's network
@@ -37,8 +37,9 @@ RoutingTableEntry RoutingTable::lookup(uint32_t ip) const {
             // Compare mask lengths, choose the longest mask (more specific route)
             // Here we assume mask is stored as a 32-bit integer with network bits set to 1.
             // A common practice is to convert mask to a prefix length, but direct comparison works if consistently applied.
-            if (entry.mask >= matched_mask) {
-                matched_mask = entry.mask;
+            unsigned int entry_mask = ntohl(entry.mask);
+            if (entry_mask >= matched_len) {
+                matched_len = entry_mask;
                 longest_match = &entry;
             }
         }

@@ -49,6 +49,10 @@
 #define IP_MAXPACKET 65535
 #endif
 
+#ifndef IP_ADDR_LEN
+#define IP_ADDR_LEN 4
+#endif
+
 #define ICMP_DATA_SIZE 28
 
 namespace simple_router {
@@ -113,9 +117,6 @@ struct ethernet_hdr
 #ifndef ETHER_ADDR_LEN
 #define ETHER_ADDR_LEN 6
 #endif
-#ifndef IP_ADDR_LEN
-#define IP_ADDR_LEN 4
-#endif
   uint8_t  ether_dhost[ETHER_ADDR_LEN]; /* destination ethernet address */
   uint8_t  ether_shost[ETHER_ADDR_LEN]; /* source ethernet address */
   uint16_t ether_type;                  /* packet type ID */
@@ -133,6 +134,7 @@ enum icmptype { // icmp_type
   icmp_echo_rely = 0x0000,
   icmp_time_exceeded = 0x000b,
   icmp_port_unreachable = 0x0003,
+  icmp_host_unreachable = 0x0003,
 };
 
 enum icmpcode { // icmp_code
