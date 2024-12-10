@@ -20,6 +20,14 @@ router: $(CLASSES) core/main.o
 clean:
 	rm -rf *.o *~ *.gch *.swp *.dSYM router *.tar.gz pox.hpp pox.cpp build/ *.pyc core/*.o
 
-dist: tarball
-tarball: clean
-	tar -cvzf /tmp/$(USERID).tar.gz --exclude=./.vagrant . && mv /tmp/$(USERID).tar.gz .
+# dist: tarball
+# tarball: clean
+# 	tar -cvzf /tmp/$(USERID).tar.gz --exclude=./.vagrant . && mv /tmp/$(USERID).tar.gz .
+
+clean_and_keep:
+	rm -rf *.o *~ *.gch *.swp *.dSYM *.tar.gz *.pyc build/*.o core/*.o
+	rm -rf build/
+	rm -f *~ *.swp *.dSYM
+	find . -type f -name '*.log' -delete
+
+dist: clean_and_keep
