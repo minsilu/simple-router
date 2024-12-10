@@ -138,6 +138,8 @@ enum icmptype { // icmp_type
 };
 
 enum icmpcode { // icmp_code
+  icmp_echo_code = 0x0000,
+  icmp_echo_reply_code = 0x0000,
   icmp_time_exceeded_code = 0x0000,
   icmp_port_unreachable_code = 0x0003,
   icmp_host_unreachable_code = 0x0001,

@@ -273,10 +273,11 @@ void SimpleRouter::handleICMPEcho(const Buffer& packet, const std::string& inIfa
 
     icmp_hdr* icmp_ptr = (struct icmp_hdr*)((uint8_t*)packet.data() + sizeof(ethernet_hdr) + sizeof(ip_hdr));
     // type check
-    if(icmp_ptr->icmp_type != icmp_echo || icmp_ptr->icmp_type != icmp_echo_rely){
-        std::cout << "ICMP type is not Echo or Echo Request, ignoring." << std::endl;
+    if(icmp_ptr->icmp_type != icmp_echo && icmp_ptr->icmp_code != icmp_echo_code){
+        std::cout << "ICMP type is not Echo Message, ignoring." << std::endl;
         return;
     }
+
     // checksum
     if (cksum((uint8_t*)icmp_ptr, packet.size() - sizeof(ethernet_hdr) - sizeof(ip_hdr)) != 0xffff) {
         std::cout << "ICMP header checksum is invalid, ignoring." << std::endl;
@@ -326,7 +327,7 @@ void SimpleRouter::handleICMP(const Buffer& packet, const std::string& inIface) 
     //ICMP Header 
     icmp_hdr* reply_icmp = (struct icmp_hdr*)((uint8_t*)reply.data() + sizeof(ethernet_hdr) + sizeof(ip_hdr));
     reply_icmp->icmp_type = icmp_echo_rely;
-    reply_icmp->icmp_code = 0x00; 
+    reply_icmp->icmp_code = icmp_echo_reply_code; 
     reply_icmp->icmp_sum = 0; 
     reply_icmp->icmp_sum = cksum((uint8_t*)(reply_icmp), packet.size() - sizeof(ethernet_hdr) - sizeof(ip_hdr));
 
